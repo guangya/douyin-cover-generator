@@ -95,8 +95,8 @@
       <div class="hint">例：普通人真的能靠写作赚钱吗？／一个人写软件，能养活自己吗？／为什么越忙越穷？</div>
     </div>
     <div>
-      <label>账号 / 品牌名（左上角，默认“王同学说”）</label>
-      <input id="brandInput" type="text" value="王同学说" />
+      <label>账号 / 品牌名（左上角，默认“王同学胡说”）</label>
+      <input id="brandInput" type="text" value="王同学胡说" />
     </div>
     <div>
       <label>底部 slogan（默认“读书 · 分享 · 破局 · 致富”）</label>
@@ -152,6 +152,16 @@
       </div>
       <canvas class="cover" id="cvH" width="480" height="360"></canvas>
     </div>
+    <div class="preview-card">
+      <div class="preview-card-head">
+        <div class="preview-card-titles">
+          <span class="preview-card-title">微信 2.35:1（公众号首图）</span>
+          <span class="preview-card-sub">预览 470×200</span>
+        </div>
+        <button class="btn alt" id="dlW">⬇ 下载微信 PNG</button>
+      </div>
+      <canvas class="cover" id="cvW" width="470" height="200"></canvas>
+    </div>
   </div></div></div>
 
 <script>
@@ -159,7 +169,7 @@
   const SCALES = { "2x":{v:600,h:800}, "3x":{v:900,h:1200}, "std":{v:1080,h:1440}, "4x":{v:1200,h:1600} };
   const $ = (id) => document.getElementById(id);
   const DEFAULT_TITLE = "微小的改变 x 时间 = 巨大的回报";
-  const state = { mode:"solo", title:DEFAULT_TITLE, brand:"王同学说",
+  const state = { mode:"solo", title:DEFAULT_TITLE, brand:"王同学胡说",
     slogan:"读书 · 分享 · 破局 · 致富", episode:"01", book:"纳瓦尔宝典", photo:null, accent:"#1A1A1A" };
   let bgImg = null;
 
@@ -207,7 +217,68 @@
     ctx.fillStyle = sg; ctx.fillRect(0,0,W,H);
   }
 
-  function drawCover(ctx, W, H, d, accent) {
+  function drawWxCover(ctx, W, H, d, accent) {
+    const pad = Math.round(W*0.05);
+    drawBackground(ctx, bgImg, W, H);
+    drawScrim(ctx, W, H);
+    const mark = shade(accent, 0.55);
+    const GOLD = "#c98b24";
+
+    // 标题区（上方），无顶部栏目
+    const contentW = W - pad*2;
+    const titleTopLimit = Math.round(H*0.10);
+    const titleBotLimit = Math.round(H*0.62);
+    let titleSize = Math.round(H*0.16), lines, blockH;
+    while (true) {
+      ctx.font = `bold ${titleSize}px ${FONT}`;
+      lines = wrapText(ctx, d.title, contentW);
+      blockH = lines.length*titleSize*1.18;
+      if ((lines.length<=3 && blockH <= (titleBotLimit-titleTopLimit)) || titleSize < H*0.06) break;
+      titleSize = Math.round(titleSize*0.9);
+    }
+    const lineH = titleSize*1.18;
+    const ty = titleTopLimit + Math.max(0, (titleBotLimit-titleTopLimit-blockH)/2);
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = Math.max(2, Math.round(H*0.02));
+    ctx.fillStyle = "#FFFFFF"; ctx.textAlign="left"; ctx.textBaseline="top";
+    for (let i=0;i<lines.length;i++) ctx.fillText(lines[i], pad, ty+i*lineH);
+    ctx.restore();
+    const ulY = ty + blockH + Math.round(H*0.04);
+    ctx.fillStyle = GOLD;
+    ctx.fillRect(pad, ulY, Math.min(contentW, Math.round(W*0.30)), Math.max(3, Math.round(H*0.018)));
+
+    // 底部栏：左侧 头像 + 品牌名，右侧 slogan
+    const av = Math.round(H*0.14);
+    const acx = pad + av/2, acy = H - pad - av/2;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(acx, acy, av/2, 0, Math.PI*2); ctx.fillStyle = mark; ctx.fill();
+    ctx.beginPath(); ctx.arc(acx, acy, (av/2)-Math.max(2,Math.round(av*0.04)), 0, Math.PI*2); ctx.clip();
+    if (d.photo && d.photo.width) {
+      const ir = d.photo.width/d.photo.height; let sw,sh,sx,sy;
+      if (ir>1){ sh=d.photo.height; sw=sh; sx=(d.photo.width-sw)/2; sy=0; }
+      else { sw=d.photo.width; sh=sw; sx=0; sy=(d.photo.height-sh)/2; }
+      ctx.drawImage(d.photo, sx, sy, sw, sh, acx-av/2, acy-av/2, av, av);
+    } else {
+      ctx.fillStyle = accentText(mark);
+      ctx.beginPath(); ctx.arc(acx, acy-av*0.14, av*0.16, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(acx-av*0.30, acy+av*0.34);
+      ctx.arc(acx, acy+av*0.10, av*0.30, Math.PI, 0); ctx.lineTo(acx+av*0.30, acy+av*0.34); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+
+    const brandSize = Math.round(H*0.06);
+    ctx.fillStyle = "#E8E8E8"; ctx.font = `bold ${brandSize}px ${FONT}`;
+    ctx.textAlign="left"; ctx.textBaseline="middle";
+    ctx.fillText(d.brand, acx + av/2 + Math.round(H*0.027), acy);
+
+    const slogSize = Math.round(H*0.06);
+    ctx.fillStyle = "#E8E8E8"; ctx.font = `800 ${slogSize}px ${FONT}`;
+    ctx.textAlign="right"; ctx.textBaseline="middle";
+    ctx.fillText(d.slogan, W-pad, acy);
+  }
+
+  function drawCover(ctx, W, H, d, accent, layout) {
+    if (layout === "wx") return drawWxCover(ctx, W, H, d, accent);
     const pad = Math.round(W*0.08);
     const contentW = W - pad*2;
 
@@ -296,15 +367,18 @@
   function renderPreview() {
     drawCover($("cvV").getContext("2d"), 360, 480, state, state.accent);
     drawCover($("cvH").getContext("2d"), 480, 360, state, state.accent);
+    drawCover($("cvW").getContext("2d"), 470, 200, state, state.accent, "wx");
   }
   function download(orientation) {
     const s = SCALES[$("scaleSel").value] || SCALES["std"];
-    const W = orientation==="v" ? s.v : s.h;
-    const H = orientation==="v" ? Math.round(s.v*4/3) : Math.round(s.h*3/4);
+    let W, H;
+    if (orientation==="v") { W=s.v; H=Math.round(s.v*4/3); }
+    else if (orientation==="h") { W=s.h; H=Math.round(s.h*3/4); }
+    else { W=Math.round(s.h*2.35); H=s.h; } // 微信 2.35:1 横幅首图
     const c = document.createElement("canvas"); c.width=W; c.height=H;
-    drawCover(c.getContext("2d"), W, H, state, state.accent);
+    drawCover(c.getContext("2d"), W, H, state, state.accent, orientation==="wx" ? "wx" : undefined);
     c.toBlob((b)=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b);
-      a.download="封面_星空版_"+(orientation==="v"?"竖3-4":"横4-3")+".png"; a.click();
+      a.download="封面_星空版_"+(orientation==="v"?"竖3-4":orientation==="h"?"横4-3":"微信2-35")+".png"; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),1000); }, "image/png");
   }
   function bindText(id,key){ $(id).addEventListener("input",(e)=>{ state[key]=e.target.value; renderPreview(); }); }
@@ -327,6 +401,7 @@
   state.photo.src = "data:image/jpeg;base64," + DEFAULT_PHOTO;
   $("dlV").addEventListener("click",()=>download("v"));
   $("dlH").addEventListener("click",()=>download("h"));
+  $("dlW").addEventListener("click",()=>download("wx"));
 
   bgImg = new Image();
   bgImg.onload = renderPreview;
