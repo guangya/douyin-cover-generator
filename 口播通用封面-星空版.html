@@ -78,7 +78,7 @@
     基于 <b>深底绿点缀版</b> 的布局（不改原文件）：背景换成<b>星空照片</b>，极简浅灰头像环 + <b>纯白集数号</b>，标题下方一道 <b>暖金 #c98b24</b> 强调线。<br>
     左下角头像已<b>放大</b>；照片上叠了<b>暗化蒙版</b>保证白字可读。背景图已内嵌（离线可用、导出不污染画布）。<br>
     标题字体使用 <b>鸿蒙字体 HarmonyOS Sans</b>（从 jsdelivr CDN 加载，加载失败页面会提示并回退系统字体）。
-    保留：散题 / 合集双模式、一键导出 PNG（竖 3:4 / 横 4:3）。背景图可在下方替换。
+    保留：散题 / 合集双模式、一键导出 PNG（竖 3:4 / 横 4:3 / 微信 2.35:1 / 方形 1:1 视频号合集 744）。方形封面与竖/横封面完全一致、跟随所选模式（散题/合集），不单独加书封图。背景图可在下方替换。
   </p>
 
   <div class="panel">
@@ -161,6 +161,16 @@
         <button class="btn alt" id="dlW">⬇ 下载微信 PNG</button>
       </div>
       <canvas class="cover" id="cvW" width="470" height="200"></canvas>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-head">
+        <div class="preview-card-titles">
+          <span class="preview-card-title">方形 1:1（视频号合集封面 · 744px）</span>
+          <span class="preview-card-sub">预览 420×420 · 中心 592 安全区</span>
+        </div>
+        <button class="btn alt" id="dlS">⬇ 下载方形 PNG</button>
+      </div>
+      <canvas class="cover" id="cvS" width="420" height="420"></canvas>
     </div>
   </div></div></div>
 
@@ -277,11 +287,9 @@
     ctx.fillText(d.slogan, W-pad, acy);
   }
 
-  function drawCover(ctx, W, H, d, accent, layout) {
+  function drawCover(ctx, W, H, d, accent, layout, safeInset) {
     if (layout === "wx") return drawWxCover(ctx, W, H, d, accent);
-    const pad = Math.round(W*0.08);
-    const contentW = W - pad*2;
-
+    const inset = safeInset ? Math.round(safeInset) : 0;
     drawBackground(ctx, bgImg, W, H);
     drawScrim(ctx, W, H);
 
@@ -289,7 +297,14 @@
     const markDark = accentText(mark);
     const GOLD = "#c98b24"; // 暖金：仅标题下划线强调色，不与头像环/集数同色
 
-    const brandSize = Math.round(W*0.05);
+    // 安全区内缩：方形 1:1 导出 744 后平台会裁掉中心 592 以外，故内容须锁进中心 592 区
+    ctx.save();
+    if (inset > 0) ctx.translate(inset, inset);
+    const w = W - inset*2, h = H - inset*2;
+    const pad = Math.round(w*0.08);
+    const contentW = w - pad*2;
+
+    const brandSize = Math.round(w*0.05);
     const brandY = pad + Math.round(brandSize*0.45);
     const showAt = (d.mode!=="series");
     if (showAt) {
@@ -303,8 +318,8 @@
     ctx.fillText(brandText, pad + (showAt ? Math.round(brandSize*1.2) : 0), brandY);
 
     if (d.mode==="series") {
-      const badge = Math.round(W*0.12);
-      const bx = W-pad-badge, by = pad;
+      const badge = Math.round(w*0.12);
+      const bx = w-pad-badge, by = pad;
       ctx.fillStyle = "rgba(12,15,20,0.55)"; roundRect(ctx, bx, by, badge, badge, Math.round(badge*0.18)); ctx.fill();
       ctx.fillStyle = "#FFFFFF"; ctx.font = `bold ${Math.round(badge*0.5)}px ${FONT}`;
       ctx.textAlign="center"; ctx.textBaseline="alphabetic";
@@ -314,32 +329,32 @@
       ctx.fillText(d.episode, bcx, bcy);
     }
 
-    let belowBrand = brandY + Math.round(brandSize*0.45) + Math.round(W*0.025);
+    let belowBrand = brandY + Math.round(brandSize*0.45) + Math.round(w*0.025);
 
-    const titleTopLimit = belowBrand + Math.round(W*0.02);
-    const titleBotLimit = H - Math.round(H*0.20);
-    let titleSize = Math.round(Math.min(W,H)*0.11), lines, blockH;
+    const titleTopLimit = belowBrand + Math.round(w*0.02);
+    const titleBotLimit = h - Math.round(h*0.20);
+    let titleSize = Math.round(Math.min(w,h)*0.11), lines, blockH;
     while (true) {
       ctx.font = `bold ${titleSize}px ${FONT}`;
       lines = wrapText(ctx, d.title, contentW);
       blockH = lines.length*titleSize*1.18;
-      if ((lines.length<=3 && blockH <= (titleBotLimit-titleTopLimit)) || titleSize < W*0.05) break;
+      if ((lines.length<=3 && blockH <= (titleBotLimit-titleTopLimit)) || titleSize < w*0.05) break;
       titleSize = Math.round(titleSize*0.9);
     }
     const lineH = titleSize*1.18;
     const ty = titleTopLimit + Math.max(0, (titleBotLimit-titleTopLimit-blockH)/2);
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = Math.max(2, Math.round(W*0.012));
+    ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = Math.max(2, Math.round(w*0.012));
     ctx.fillStyle = "#FFFFFF"; ctx.textAlign="left"; ctx.textBaseline="top";
     for (let i=0;i<lines.length;i++) ctx.fillText(lines[i], pad, ty+i*lineH);
     ctx.restore();
 
-    const ulY = ty + blockH + Math.round(W*0.02);
+    const ulY = ty + blockH + Math.round(w*0.02);
     ctx.fillStyle = GOLD;
-    ctx.fillRect(pad, ulY, Math.min(contentW, Math.round(W*0.42)), Math.max(3, Math.round(W*0.012)));
+    ctx.fillRect(pad, ulY, Math.min(contentW, Math.round(w*0.42)), Math.max(3, Math.round(w*0.012)));
 
-    const av = Math.round(Math.min(W,H)*0.15);
-    const acx = pad + av/2, acy = H - pad - av/2;
+    const av = Math.round(Math.min(w,h)*0.15);
+    const acx = pad + av/2, acy = h - pad - av/2;
     ctx.save();
     ctx.beginPath(); ctx.arc(acx, acy, av/2, 0, Math.PI*2);
     ctx.fillStyle = mark; ctx.fill();
@@ -357,28 +372,39 @@
     }
     ctx.restore();
 
-    const slogSize = Math.round(W*0.032);
+    const slogSize = Math.round(w*0.032);
     ctx.fillStyle = "#E8E8E8"; ctx.font = `800 ${slogSize}px ${FONT}`;
     ctx.textAlign="right"; ctx.textBaseline="middle";
-    let meta = d.slogan;
-    ctx.fillText(meta, W-pad, acy);
+    ctx.fillText(d.slogan, w-pad, acy);
+    ctx.restore(); // 收尾 safeInset 平移
   }
 
   function renderPreview() {
     drawCover($("cvV").getContext("2d"), 360, 480, state, state.accent);
     drawCover($("cvH").getContext("2d"), 480, 360, state, state.accent);
     drawCover($("cvW").getContext("2d"), 470, 200, state, state.accent, "wx");
+    const SQ = 420; // 方形预览边长
+    const sqInset = Math.round(SQ * (744-592)/(2*744)); // ≈43，对应导出 744 时中心 592 安全区的 76px
+    drawCover($("cvS").getContext("2d"), SQ, SQ, state, state.accent, undefined, sqInset);
+    // 方形预览：标出 592 安全区（导出 744 后平台裁掉此框外），便于确认内容不溢出
+    const sctx = $("cvS").getContext("2d");
+    sctx.save();
+    sctx.strokeStyle = "rgba(255,255,255,0.30)"; sctx.lineWidth = 1; sctx.setLineDash([4,4]);
+    sctx.strokeRect(sqInset+0.5, sqInset+0.5, SQ - sqInset*2 - 1, SQ - sqInset*2 - 1);
+    sctx.restore();
   }
   function download(orientation) {
     const s = SCALES[$("scaleSel").value] || SCALES["std"];
     let W, H;
     if (orientation==="v") { W=s.v; H=Math.round(s.v*4/3); }
     else if (orientation==="h") { W=s.h; H=Math.round(s.h*3/4); }
-    else { W=Math.round(s.h*2.35); H=s.h; } // 微信 2.35:1 横幅首图
+    else if (orientation==="wx") { W=Math.round(s.h*2.35); H=s.h; } // 微信 2.35:1 横幅首图
+    else { W=744; H=744; } // 方形 1:1 视频号合集：固定 744×744（平台裁中心 592×592）
     const c = document.createElement("canvas"); c.width=W; c.height=H;
-    drawCover(c.getContext("2d"), W, H, state, state.accent, orientation==="wx" ? "wx" : undefined);
+    const sqSafe = (orientation==="s") ? Math.round(W * (744-592)/(2*744)) : 0; // 744 下 =76，锁进中心 592 安全区
+    drawCover(c.getContext("2d"), W, H, state, state.accent, orientation==="wx" ? "wx" : undefined, sqSafe);
     c.toBlob((b)=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b);
-      a.download="封面_星空版_"+(orientation==="v"?"竖3-4":orientation==="h"?"横4-3":"微信2-35")+".png"; a.click();
+      a.download="封面_星空版_"+(orientation==="v"?"竖3-4":orientation==="h"?"横4-3":orientation==="wx"?"微信2-35":"视频号合集744")+".png"; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),1000); }, "image/png");
   }
   function bindText(id,key){ $(id).addEventListener("input",(e)=>{ state[key]=e.target.value; renderPreview(); }); }
@@ -402,6 +428,7 @@
   $("dlV").addEventListener("click",()=>download("v"));
   $("dlH").addEventListener("click",()=>download("h"));
   $("dlW").addEventListener("click",()=>download("wx"));
+  $("dlS").addEventListener("click",()=>download("s"));
 
   bgImg = new Image();
   bgImg.onload = renderPreview;
