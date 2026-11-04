@@ -78,7 +78,7 @@
     基于 <b>深底绿点缀版</b> 的布局（不改原文件）：背景换成<b>星空照片</b>，极简浅灰头像环 + <b>纯白集数号</b>，标题下方一道 <b>暖金 #c98b24</b> 强调线。<br>
     左下角头像已<b>放大</b>；照片上叠了<b>暗化蒙版</b>保证白字可读。背景图已内嵌（离线可用、导出不污染画布）。<br>
     标题字体使用 <b>鸿蒙字体 HarmonyOS Sans</b>（从 jsdelivr CDN 加载，加载失败页面会提示并回退系统字体）。
-    保留：散题 / 合集双模式、一键导出 PNG（竖 3:4 / 横 4:3 / 微信 2.35:1 / 方形 1:1 视频号合集 744）。方形封面与竖/横封面完全一致、跟随所选模式（散题/合集），不单独加书封图。背景图可在下方替换。
+    保留：散题 / 合集双模式、一键导出 PNG（竖 3:4 / 横 4:3 / 微信 2.35:1 / 方形 1:1 抖音 + 方形 1:1 视频号合集 744）。两张方形封面与竖/横封面完全一致、跟随所选模式（散题/合集），不单独加书封图；区别：抖音方形填满整张（平台不裁切），视频号方形固定 744 且内容锁进中心 592 安全区。背景图可在下方替换。
   </p>
 
   <div class="panel">
@@ -171,6 +171,16 @@
         <button class="btn alt" id="dlS">⬇ 下载方形 PNG</button>
       </div>
       <canvas class="cover" id="cvS" width="420" height="420"></canvas>
+    </div>
+    <div class="preview-card">
+      <div class="preview-card-head">
+        <div class="preview-card-titles">
+          <span class="preview-card-title">方形 1:1（抖音封面）</span>
+          <span class="preview-card-sub">预览 420×420 · 填满整张</span>
+        </div>
+        <button class="btn alt" id="dlD">⬇ 下载抖音方形 PNG</button>
+      </div>
+      <canvas class="cover" id="cvD" width="420" height="420"></canvas>
     </div>
   </div></div></div>
 
@@ -392,6 +402,8 @@
     sctx.strokeStyle = "rgba(255,255,255,0.30)"; sctx.lineWidth = 1; sctx.setLineDash([4,4]);
     sctx.strokeRect(sqInset+0.5, sqInset+0.5, SQ - sqInset*2 - 1, SQ - sqInset*2 - 1);
     sctx.restore();
+    // 抖音方形 1:1：填满整张，平台不裁切，无 safeInset
+    drawCover($("cvD").getContext("2d"), SQ, SQ, state, state.accent);
   }
   function download(orientation) {
     const s = SCALES[$("scaleSel").value] || SCALES["std"];
@@ -399,12 +411,13 @@
     if (orientation==="v") { W=s.v; H=Math.round(s.v*4/3); }
     else if (orientation==="h") { W=s.h; H=Math.round(s.h*3/4); }
     else if (orientation==="wx") { W=Math.round(s.h*2.35); H=s.h; } // 微信 2.35:1 横幅首图
+    else if (orientation==="d") { W=s.v; H=s.v; } // 抖音 1:1 方形：填满整张，平台不裁切，跟随画布尺寸档
     else { W=744; H=744; } // 方形 1:1 视频号合集：固定 744×744（平台裁中心 592×592）
     const c = document.createElement("canvas"); c.width=W; c.height=H;
     const sqSafe = (orientation==="s") ? Math.round(W * (744-592)/(2*744)) : 0; // 744 下 =76，锁进中心 592 安全区
     drawCover(c.getContext("2d"), W, H, state, state.accent, orientation==="wx" ? "wx" : undefined, sqSafe);
     c.toBlob((b)=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b);
-      a.download="封面_星空版_"+(orientation==="v"?"竖3-4":orientation==="h"?"横4-3":orientation==="wx"?"微信2-35":"视频号合集744")+".png"; a.click();
+      a.download="封面_星空版_"+(orientation==="v"?"竖3-4":orientation==="h"?"横4-3":orientation==="wx"?"微信2-35":orientation==="d"?"抖音方形1-1":"视频号合集744")+".png"; a.click();
       setTimeout(()=>URL.revokeObjectURL(a.href),1000); }, "image/png");
   }
   function bindText(id,key){ $(id).addEventListener("input",(e)=>{ state[key]=e.target.value; renderPreview(); }); }
@@ -429,6 +442,7 @@
   $("dlH").addEventListener("click",()=>download("h"));
   $("dlW").addEventListener("click",()=>download("wx"));
   $("dlS").addEventListener("click",()=>download("s"));
+  $("dlD").addEventListener("click",()=>download("d"));
 
   bgImg = new Image();
   bgImg.onload = renderPreview;
